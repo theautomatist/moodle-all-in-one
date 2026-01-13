@@ -1,0 +1,17 @@
+version: '3.1'
+services:
+  moodle:
+    container_name: moodle-app
+    image: moodle_all_in_one:${IMAGE_TAG:-dev}
+    restart: always
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      MOODLE_HOST: ${MOODLE_HOST:-localhost}
+      MOODLE_PORT: ${MOODLE_PORT:-9090}
+    ports:
+      - "${MOODLE_PORT:-9090}:${MOODLE_PORT:-9090}"
+    volumes:
+      - moodle_db:/var/lib/mysql
+
+volumes:
+  moodle_db:

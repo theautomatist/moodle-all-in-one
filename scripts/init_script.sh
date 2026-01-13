@@ -2,7 +2,10 @@
 
 # Container init
 MARKER_FILE="/var/www/moodledata/container-init"
-if [ -f "$MARKER_FILE" ]; then
+MOODLE_ROOT="/var/www/html"
+MOODLE_ARCHIVE="/tmp/moodle.tgz"
+
+if [ -f "$MARKER_FILE" ] && [ -f "$MOODLE_ROOT/config.php" ]; then
   echo "=========="
   echo " S T A R T"
   echo "=========="
@@ -10,17 +13,27 @@ if [ -f "$MARKER_FILE" ]; then
   echo "update moodle config.php"
   echo "-> moodle host: $MOODLE_HOST"
   echo "-> moodle port: $MOODLE_PORT"
-  config_file="/var/www/html/config.php"
-  sed -i "s/\(\$CFG->wwwroot\s*=\s*'\)[^']*';/\1http:\/\/$MOODLE_HOST:$MOODLE_PORT';/" $config_file
+  config_file="$MOODLE_ROOT/config.php"
+  sed -i "s/\(\$CFG->wwwroot\s*=\s*'\)[^']*';/\1http:\/\/$MOODLE_HOST:$MOODLE_PORT';/" "$config_file"
   envsubst '\$MOODLE_HOST \$MOODLE_PORT' </etc/nginx/conf.d/moodle.template >/etc/nginx/conf.d/default.conf
 
-  /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+  exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+fi
+
+if [ -f "$MARKER_FILE" ] && [ ! -f "$MOODLE_ROOT/config.php" ]; then
+  echo "Marker exists but Moodle config is missing. Re-initializing."
+  rm -f "$MARKER_FILE"
 fi
 
 echo "==========================="
 echo " I N I T  C O N T A I N E R"
 echo "==========================="
-touch "$MARKER_FILE"
+
+if [ ! -f "$MOODLE_ARCHIVE" ]; then
+  echo "ERROR: Moodle archive missing at $MOODLE_ARCHIVE. Rebuild the image." >&2
+  exit 1
+fi
+
 /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf &
 
 # Datenbank- und Benutzerinformationen
@@ -44,11 +57,11 @@ SQL_COMMAND="CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
 echo "$SQL_COMMAND" | mysql -u nobody
 
 echo "Unpack moodle.tgz"
-tar -zxvf /tmp/moodle.tgz -C /tmp >/dev/null 2>&1
-rm /tmp/moodle.tgz
-mv /tmp/moodle/* /var/www/html
+tar -zxvf "$MOODLE_ARCHIVE" -C /tmp >/dev/null 2>&1
+rm "$MOODLE_ARCHIVE"
+mv /tmp/moodle/* "$MOODLE_ROOT"
 
-php /var/www/html/admin/cli/install.php \
+php "$MOODLE_ROOT/admin/cli/install.php" \
   --lang=de \
   --wwwroot="http://$MOODLE_HOST:$MOODLE_PORT" \
   --dataroot=/var/www/moodledata \
@@ -67,9 +80,10 @@ php /var/www/html/admin/cli/install.php \
 echo "update moodle config.php"
 echo "-> moodle host: $MOODLE_HOST"
 echo "-> moodle port: $MOODLE_PORT"
-config_file="/var/www/html/config.php"
-sed -i "s/\(\$CFG->wwwroot\s*=\s*'\)[^']*';/\1http:\/\/$MOODLE_HOST:$MOODLE_PORT';/" $config_file
+config_file="$MOODLE_ROOT/config.php"
+sed -i "s/\(\$CFG->wwwroot\s*=\s*'\)[^']*';/\1http:\/\/$MOODLE_HOST:$MOODLE_PORT';/" "$config_file"
 envsubst </etc/nginx/conf.d/moodle.template >/etc/nginx/conf.d/default.conf
+touch "$MARKER_FILE"
 
 echo "================="
 echo " I N I T  D O N E"

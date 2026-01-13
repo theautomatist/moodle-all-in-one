@@ -41,7 +41,7 @@ RUN rm -rf /tmp/*
 RUN rm -rf /var/cache/apk/*
 
 # Configure PHP-FPM
-ENV PHP_INI_DIR /etc/php82
+ENV PHP_INI_DIR=/etc/php82
 COPY config/fpm-pool.conf ${PHP_INI_DIR}/php-fpm.d/www.conf
 COPY config/php.ini ${PHP_INI_DIR}/conf.d/custom.ini
 
@@ -64,8 +64,8 @@ RUN chown -R nobody.nobody /run/mysqld
 VOLUME /var/lib/mysql
 
 # Configure moodle
-ENV MOODLE_HOST "localhost"
-ENV MOODLE_PORT "9090"
+ENV MOODLE_HOST=localhost
+ENV MOODLE_PORT=9090
 RUN wget "https://download.moodle.org/download.php/direct/stable403/moodle-latest-403.tgz" -O /tmp/moodle.tgz
 RUN chown nobody.nobody /tmp/moodle.tgz
 RUN mkdir /var/www/moodledata
@@ -95,7 +95,7 @@ USER nobody
 EXPOSE ${MOODLE_PORT}
 
 # Let supervisord start nginx & php-fpm
-CMD /usr/local/bin/init_script.sh
+CMD ["/usr/local/bin/init_script.sh"]
 
 # Configure a healthcheck to validate that everything is up&running
 HEALTHCHECK --timeout=10s CMD curl --silent --fail "http://localhost:${MOODLE_PORT}/index.php"
