@@ -1,4 +1,5 @@
 # Moodle All-in-One
+[![ci](https://github.com/theautomatist/Moodle-All-in-One/actions/workflows/ci.yml/badge.svg)](https://github.com/theautomatist/Moodle-All-in-One/actions/workflows/ci.yml)
 
 An all-in-one Moodle container image based on the small Alpine 3.18 base image,
 bundling Nginx, PHP-FPM, and MariaDB for quick local testing or demos. Moodle is
